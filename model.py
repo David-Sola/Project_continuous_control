@@ -11,7 +11,6 @@ def hidden_init(layer):
 class Actor(nn.Module):
     def __init__(self, state_space, action_space, out_fcn=nn.Tanh(), fc1_units=800, fc2_units=400, fc3_units=200):
         '''
-
         :param state_space: The observation or state space of the environment
         :param action_space: The action space of the environment
         :param hidden_layers: The hidden layers to create the neural network
@@ -40,7 +39,6 @@ class Actor(nn.Module):
 class Critic(nn.Module):
     def __init__(self, state_space, action_space, fc1_units=800, fc2_units=400, fc3_units=200):
         '''
-
         :param state_space: The observation or state space of the environment
         :param action_space: The action space of the environment
         :param hidden_layers: The hidden layers to create the neural network

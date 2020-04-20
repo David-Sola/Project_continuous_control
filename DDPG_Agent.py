@@ -55,6 +55,16 @@ class Agent():
         self.t_step = 0
 
     def step(self, state, action, reward, next_state, done):
+        '''
+        Get the current state, action, reward, next_state and done tuple and store it in the replay buffer.
+        Also check if already enough samples have been collected in order to start a training step
+        :param state: Current state of the environment
+        :param action: Action that has been chosen in current state
+        :param reward: The reward that has been received in current state
+        :param next_state: The next state that has been reached due to the current action
+        :param done: Parameter to see if an episode has finished
+        :return: -
+        '''
         #Save experience, reward, and next state in the replay buffer
         self.memory.add(state, action, reward, next_state, done)
         self.t_step = (self.t_step + 1) % UPDATE_EVERY
@@ -66,9 +76,13 @@ class Agent():
 
     def act(self, state, sigma):
         '''
-        Return the action for the current state
-        :param state:
-        :return:
+        Functionality to determine the action in the current state.
+        Additionally to the current action which is determined by the actor a normal distribution will be added to the
+        action space to have enough exploration at least in the beginning of the training. The normal distribution will
+        get smaller with time expressed through the parameter sigma
+        :param state: Current state of the environment
+        :param sigma: Parameter which decays over time to make the normal distribution smaller
+        :return: action which shall be performed in the environment
         '''
         noise = np.random.normal(0, sigma, 4)
         state = torch.from_numpy(state).float().to(device)
@@ -86,9 +100,17 @@ class Agent():
         Q_targets = r+ gamma * critic_target(next_state, actor_target(next_state)
             actor_target(state) --> action
             critic_target(state, action) --> Q-value
-        :param experiences:
-        :param gamma:
-        :return:
+        Also update the the actor with gradient ascent by comparing the loss between the actor and the critiv actions.
+        Perform the learning multiple times expressed by the parameter UPDATE_NUMBER
+
+        IMPORTANT TRICK:
+        A important trick has been introduced to make the learning more stable.
+        The learning rate decays over time. After every learning step the learning rate will be decayed.
+        This makes the agent in the beginning more aggressive and more passive the longer it trains
+        The function for this is called exp_lr_scheduler
+        :param experiences: A sample of states, actions, rewards, next_states, dones tuples to learn from
+        :param gamma: Value to determine the reward discount
+        :return: -
         '''
 
         states, actions, rewards, next_states, dones = experiences
@@ -121,14 +143,19 @@ class Agent():
             self.soft_update(self.critic_local, self.critic_target, TAU)
             self.soft_update(self.actor_local, self.actor_target, TAU)
 
-        # Adjust the learning rate
+            '''-------------------- Adjust learning rate -----------------------'''
         self.lr_actor = max(self.lr_actor*self.lr_adjust, self.lr_min_actor)
         self.lr_critic = max(self.lr_critic*self.lr_adjust, self.lr_min_critic)
         self.actor_optimizer = self.exp_lr_scheduler(self.actor_optimizer, self.lr_actor)
         self.critic_optimizer = self.exp_lr_scheduler(self.critic_optimizer, self.lr_critic)
 
     def exp_lr_scheduler(self, optimizer, decayed_lr):
-        """Decay learning rate by a factor of lr_decay every lr_decay_epoch epochs"""
+        '''
+        Set the learning rate to a decayed learning rate, without initializing the optimizer from scratch
+        :param optimizer: the optimizer in which the learning rate shall be adjusted
+        :param decayed_lr: the decaed learning rate to be set
+        :return: optimizer with new learning rate
+        '''
 
         for param_group in optimizer.param_groups:
             param_group['lr'] = decayed_lr
@@ -149,10 +176,10 @@ class ReplayBuffer():
     def __init__(self, action_size, buffer_size, batch_size, seed):
         '''
         Initialize replay buffer
-        :param action_size:
-        :param buffer_size:
-        :param batch_size:
-        :param seed:
+        :param action_size: action size of environment
+        :param buffer_size: buffer size for replay buffer
+        :param batch_size: batch size to learn from
+        :param seed: random seed
         '''
 
         self.action_space = action_size
@@ -162,6 +189,15 @@ class ReplayBuffer():
         self.seed = random.seed(seed)
 
     def add(self, state, action, reward, next_state, done):
+        '''
+        Adding a nre state, action, reward, nect_state, done tuplt to the replay memory
+        :param state: Current state
+        :param action: Action taken in current state
+        :param reward: Reward that has been granted
+        :param next_state: Next state reached
+        :param done: Information if environment has finished
+        :return: -
+        '''
         e = self.experience(state, action, reward, next_state, done)
         self.memory.append(e)
 
@@ -182,7 +218,6 @@ class ReplayBuffer():
         return (states, actions, rewards, next_states, dones)
 
     def __len__(self):
-
         return len(self.memory)
 
 
